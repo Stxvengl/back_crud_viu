@@ -104,7 +104,7 @@ class RegistroService
                 $update->apellidos = isset($input->apellidos) ? strtoupper($input->apellidos) : $update->apellidos;
                 $update->celular = isset($input->celular) ? $input->celular : $update->celular;
                 $update->direccion = isset($input->direccion) ? $input->direccion : $update->direccion;
-                $update->correo = isset($input->email) ? $input->email : $update->correo;
+                $update->correo = isset($input->correo) ? $input->correo : $update->correo;
                 $update->fecha_actualizacion = now();
                 if ($update->save()) {
                     $response->SetOk(true);

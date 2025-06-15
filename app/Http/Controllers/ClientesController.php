@@ -19,7 +19,6 @@ class ClientesController extends Controller
     public function Registro(Request $request)
     {
         try {
-            log::alert("Registro => " . collect($request->values));
             DB::beginTransaction();
             $ResponseStore = $this->RegistroServices->store($request->values);
             if (!$ResponseStore->ok) {
@@ -48,8 +47,7 @@ class ClientesController extends Controller
     public function ObtenerClientes(Request $request)
     {
         try {
-            log::alert("ObtenerClientes => " . collect($request->all()));
-            $clientes = $this->RegistroServices->GetInfoclientes($request->all());
+            $clientes = $this->RegistroServices->GetInfoclientes($request->values);
             if (!$clientes->ok) {
                 throw new Exception($clientes->message, (int)$clientes->code);
             }
@@ -71,10 +69,10 @@ class ClientesController extends Controller
     {
         try {
             DB::beginTransaction();
-            $request->validate([
+           /* $request->validate([
                 'cedula' => 'required|string|max:10',
-            ]);
-            $updateCliente = $this->RegistroServices->UpdateClientes($request->all());
+            ]);*/
+            $updateCliente = $this->RegistroServices->UpdateClientes($request->values);
             if (!$updateCliente->ok) {
                 throw new Exception($updateCliente->message, (int)$updateCliente->code);
             }
@@ -100,10 +98,10 @@ class ClientesController extends Controller
     {
         try {
             DB::beginTransaction();
-            $request->validate([
+            /*$request->validate([
                 'cedula' => 'required|string|max:10',
-            ]);
-            $deleteCliente = $this->RegistroServices->DeleteClientes($request->all());
+            ]);*/
+            $deleteCliente = $this->RegistroServices->DeleteClientes($request->values);
             if (!$deleteCliente->ok) {
                 throw new Exception($deleteCliente->message, (int)$deleteCliente->code);
             }
