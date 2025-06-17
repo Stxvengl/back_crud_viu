@@ -16,11 +16,11 @@ class ClientesController extends Controller
     {
         $this->RegistroServices = new RegistroService();
     }
-    public function Registro(Request $request)
+    public function saveVentas(Request $request)
     {
         try {
             DB::beginTransaction();
-            $ResponseStore = $this->RegistroServices->store($request->values);
+             $ResponseStore = $this->RegistroServices->store($request->values);
             if (!$ResponseStore->ok) {
                 throw new Exception($ResponseStore->message, (int)$ResponseStore->code);
             }
@@ -44,16 +44,17 @@ class ClientesController extends Controller
         }
     }
 
-    public function ObtenerClientes(Request $request)
+    public function obtenerInformacionArticulo(Request $request)
     {
         try {
-            $clientes = $this->RegistroServices->GetInfoclientes($request->values);
-            if (!$clientes->ok) {
-                throw new Exception($clientes->message, (int)$clientes->code);
+            $articulo = $this->RegistroServices->obtenerInformacionArticulo($request->values);
+            log::alert("ARTICULO => " . collect($articulo));
+            if (!$articulo->ok) {
+                throw new Exception($articulo->message, (int)$articulo->code);
             }
             return response()->json([
                 'ok' => true,
-                'data' => $clientes->data,
+                'data' => $articulo->data,
             ], 200);
         } catch (Exception $e) {
             log::alert("ERROR => " . __FILE__ . " =>" . __FUNCTION__ . " =>" . $e);
@@ -65,26 +66,18 @@ class ClientesController extends Controller
             ], 400);
         }
     }
-    public function ActualizaClientes(Request $request)
+      public function obtenerventas(Request $request)
     {
         try {
-            DB::beginTransaction();
-           /* $request->validate([
-                'cedula' => 'required|string|max:10',
-            ]);*/
-            $updateCliente = $this->RegistroServices->UpdateClientes($request->values);
-            if (!$updateCliente->ok) {
-                throw new Exception($updateCliente->message, (int)$updateCliente->code);
+            $articulo = $this->RegistroServices->obtenerventas($request->values);
+            if (!$articulo->ok) {
+                throw new Exception($articulo->message, (int)$articulo->code);
             }
-            DB::commit();
             return response()->json([
                 'ok' => true,
-                'text' => [
-                    'message' => 'Se actualizó correctamente el registro.'
-                ]
+                'data' => $articulo->data,
             ], 200);
         } catch (Exception $e) {
-            DB::rollBack();
             log::alert("ERROR => " . __FILE__ . " =>" . __FUNCTION__ . " =>" . $e);
             return response()->json([
                 'ok' => false,
@@ -94,33 +87,6 @@ class ClientesController extends Controller
             ], 400);
         }
     }
-        public function DeleteClientes(Request $request)
-    {
-        try {
-            DB::beginTransaction();
-            /*$request->validate([
-                'cedula' => 'required|string|max:10',
-            ]);*/
-            $deleteCliente = $this->RegistroServices->DeleteClientes($request->values);
-            if (!$deleteCliente->ok) {
-                throw new Exception($deleteCliente->message, (int)$deleteCliente->code);
-            }
-            DB::commit();
-            return response()->json([
-                'ok' => true,
-                'text' => [
-                    'message' => 'Se Elimino correctamente el registro.'
-                ]
-            ], 200);
-        } catch (Exception $e) {
-            DB::rollBack();
-            log::alert("ERROR => " . __FILE__ . " =>" . __FUNCTION__ . " =>" . $e);
-            return response()->json([
-                'ok' => false,
-                'text' => [
-                    'message' => $e->GetMessage()
-                ]
-            ], 400);
-        }
-    }
+    
+  
 }

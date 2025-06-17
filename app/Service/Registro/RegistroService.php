@@ -3,6 +3,8 @@
 namespace App\Service\Registro;
 
 use App\Models\Registro\Cliente;
+use App\Models\Ventas\Articulos;
+use App\Models\Ventas\Ventas;
 use App\Service\Response;
 use Illuminate\Http\Request;
 use Exception;
@@ -13,45 +15,19 @@ use PhpParser\Node\Expr\Isset_;
 class RegistroService
 {
 
-    public function store($input)
+    public function obtenerInformacionArticulo($input)
     {
         try {
             $input = (object) $input;
             $response = new Response();
-            $consulta = Cliente::where('estado', 'A')
-                ->where('cedula', $input->cedula)
-                ->first();
-            if ($consulta) {
-                $response->Setok(false);
-                $response->SetMessage('ERROR: Ya existe un registro con la cédula ingresada.');
+            $consulta = Articulos::where('estado', 'A')
+                ->where('id_localidad', 1)
+                ->select(
+                    'id_articulo as value',
+                    'descripcion as label',
+                )
+                ->get();
                 $response->SetData($consulta);
-                $response->SetCode(202);
-                return $response;
-            } else {
-                $store = new Cliente();
-                $store->cedula = $input->cedula;
-                $store->nombres = strtoupper($input->nombres);
-                $store->apellidos = strtoupper($input->apellidos);
-                $store->celular = $input->celular;
-                $store->direccion = $input->direccion;
-                $store->correo = $input->email;
-                $store->estado = 'A';
-                $store->ip = 'localhost';
-                $store->terminal = 'localhost';
-                $store->id_usuario_auditor = 1;
-                $store->fecha_creacion = now();
-                if ($store->save()) {
-                    $response->Setok(true);
-                    $response->SetMessage('Registro guardado correctamente.');
-                    $response->SetData($store);
-                    $response->SetCode(200);
-                } else {
-                    $response->Setok(false);
-                    $response->SetMessage('ERROR: No se pudo guardar el registro.');
-                    $response->SetData(null);
-                    $response->SetCode(202);
-                }
-            }
         } catch (Exception $e) {
             $response->Setok(false);
             $response->SetMessage($e->GetMessage());
@@ -59,106 +35,64 @@ class RegistroService
         }
         return $response;
     }
-    public function GetInfoclientes($input)
+
+    public function obtenerventas($input)
     {
-        $response = new Response();
         try {
-            $input = (object)$input;
-            $consulta = Cliente::where('estado', 'A');
-            if (isset($input->cedula) && !empty($input->cedula)) {
-                $consulta = $consulta->where('cedula', $input->cedula);
-            }
-            if (isset($input->nombre) && !empty($input->nombre)) {
+            $input = (object) $input;
+            $response = new Response();
+            $consulta = Ventas::where('ventas.estado', 'A')
+                ->join('articulos', 'articulos.id_articulo', '=', 'ventas.id_articulo')
+                ->where('articulos.estado', 'A')
+                ->join('localidad', 'articulos.id_localidad', '=', 'localidad.id_localidad')
+                ->where('localidad.estado', 'A')
+                ->join('users', 'users.id_localidad', '=', 'localidad.id_localidad')
+                ->where('users.id', 1)
+                //->where('users.id', $input->id_usuario)
+                ->select(
+                    'users.name as nombre',
+                    'articulos.descripcion as desc_articulo',
+                    'articulos.codigo as codigo_articulo',
+                    'localidad.descripcion as descripcion_localidad',
+                    'ventas.valor_venta',
+                );
+                if (isset($input->nombre) && !empty($input->nombre)) {
                 $nombre = strtolower($input->nombre);
-                $consulta = $consulta->whereRaw("LOWER(nombres) LIKE ?", ["%{$nombre}%"]);
+                $consulta = $consulta->whereRaw("LOWER(users.name) LIKE ?", ["%{$nombre}%"]);
             }
-            $consulta = $consulta->get();
-            if (!$consulta || $consulta->isEmpty()) {
-                $response->SetOk(false);
-                $response->SetMessage('ERROR: No se encontraron registros de clientes.');
-                $response->SetCode(202);
-            } else {
-                $response->SetData($consulta);
-            }
+            $paginate = $consulta->paginate($input->itemsPerPage, ['*'], 'page', $input->page);
+            
+            $response->SetData($paginate);
         } catch (Exception $e) {
-            $response->SetOk(false);
+            $response->Setok(false);
             $response->SetMessage($e->GetMessage());
             $response->SetCode($e->GetCode());
         }
         return $response;
     }
-    public function UpdateClientes($input)
+      public function store($input)
     {
         $response = new Response();
         try {
-            $input = (object)$input;
-            $update = Cliente::where('estado', 'A')
-                ->where('cedula', $input->cedula)
-                ->first();
-            if (!$update) {
-                $response->SetOk(false);
-                $response->SetMessage('Cedula Incorrecta por favor verifique el dato a Editar.');
-                $response->SetCode(202);
-            } else {
-                $update->nombres =   isset($input->nombres) ? strtoupper($input->nombres) : $update->nombres;
-                $update->apellidos = isset($input->apellidos) ? strtoupper($input->apellidos) : $update->apellidos;
-                $update->celular = isset($input->celular) ? $input->celular : $update->celular;
-                $update->direccion = isset($input->direccion) ? $input->direccion : $update->direccion;
-                $update->correo = isset($input->correo) ? $input->correo : $update->correo;
-                $update->fecha_actualizacion = now();
-                if ($update->save()) {
-                    $response->SetOk(true);
-                    $response->SetMessage('Registro actualizado correctamente.');
-                    $response->SetData($update);
-                    $response->SetCode(200);
-                } else {
-                    $response->SetOk(false);
-                    $response->SetMessage('No se pudo actualizar el registro.');
-                    $response->SetData(null);
-                    $response->SetCode(202);
-                }
-            }
+            log::alert(collect($input));
+            $input = (object) $input;
+            $store = new Ventas();
+            $store->id_articulo = $input->articulo_id;
+            $store->valor_venta = $input->valor_venta;
+            $store->id_usuario_auditor = isset($input->id_usuario) ? $input->id_usuario : 1;
+            $store->estado = 'A';
+            $store->ip = isset($input->ip) ? $input->ip : '109.168.10.102';
+            $store->terminal = isset($input->terminal) ? $input->terminal : 'localhost';
+
+            $store->fecha_creacion = now();
+            $store->save();
+            $response->SetData($store);
         } catch (Exception $e) {
-            Log::error("ERROR " . __FILE__ . ":" . __FUNCTION__ . "-> " .__LINE__. "-> " . $e);
-            $response->SetOk(false);
+            $response->Setok(false);
             $response->SetMessage($e->GetMessage());
             $response->SetCode($e->GetCode());
         }
         return $response;
     }
-     public function DeleteClientes($input)
-    {
-        $response = new Response();
-        try {
-            $input = (object)$input;
-            $update = Cliente::where('estado', 'A')
-                ->where('cedula', $input->cedula)
-                ->first();
-            if (!$update) {
-                $response->SetOk(false);
-                $response->SetMessage('Cedula Incorrecta por favor verifique el dato a Editar.');
-                $response->SetCode(202);
-            } else {
-                $update->estado = 'I';
-                $update->fecha_actualizacion = now();
-                if ($update->save()) {
-                    $response->SetOk(true);
-                    $response->SetMessage('Registro Elimino correctamente.');
-                    $response->SetData($update);
-                    $response->SetCode(200);
-                } else {
-                    $response->SetOk(false);
-                    $response->SetMessage('No se pudo eliminar el registro.');
-                    $response->SetData(null);
-                    $response->SetCode(202);
-                }
-            }
-        } catch (Exception $e) {
-            Log::error("ERROR " . __FILE__ . ":" . __FUNCTION__ . "-> " .__LINE__. "-> " . $e);
-            $response->SetOk(false);
-            $response->SetMessage($e->GetMessage());
-            $response->SetCode($e->GetCode());
-        }
-        return $response;
-    }
+   
 }
